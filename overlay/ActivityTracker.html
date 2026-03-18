@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+            text-shadow: 2px 2px 4px #000; /* Makes text readable on any background */
+        }
+
+        #loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #4facfe;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 18px;
+            letter-spacing: 2px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-screen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">LOADING RESOURCES...</div>
+    </div>
+
+    <div id="meters-container"></div>
+    
+    <script src="../config.js"></script>
+    <script src="./ActivityMeter.js"></script>
+    <script>
+        const container = document.getElementById('meters-container');
+        const loadingScreen = document.getElementById('loading-screen');
+
+        const bars = ActivityTriggers.map(data => {
+            return ActivityBar(
+                data.trigger, 
+                `./Assets/${data.image}`, 
+                `./Assets/${data.sound}`
+            );
+        });
+        
+
+        // Wait for everything to load
+        async function init() {
+            // Create bars but don't show them yet
+            const bars = ActivityTriggers.map(data => {
+                return ActivityBar(
+                    data.trigger, 
+                    `./Assets/${data.image}`, 
+                    `./Assets/${data.sound}`
+                );
+            });
+
+            bars.forEach(bar => container.appendChild(bar));
+
+            // Preload all images and sounds
+            const preloadPromises = ActivityTriggers.map(data => {
+                const promises = [];
+                
+                // Preload image
+                if (data.image) {
+                    promises.push(new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.onload = resolve;
+                        img.onerror = resolve; // Don't fail on error, just continue
+                        img.src = `./Assets/${data.image}`;
+                    }));
+                }
+                
+                // Preload sound (just fetch to cache)
+                if (data.sound) {
+                    promises.push(fetch(`./Assets/${data.sound}`).catch(() => null));
+                }
+                
+                return Promise.all(promises);
+            });
+
+            // Wait minimum 500ms for visual feedback (so it doesn't just flash)
+            const minLoadTime = new Promise(r => setTimeout(r, 500));
+            
+            await Promise.all([...preloadPromises, minLoadTime]);
+
+            // Fade out loading screen
+            loadingScreen.classList.add('hidden');
+            container.classList.add('ready');
+
+            // Remove loading screen from DOM after fade
+            setTimeout(() => {
+                loadingScreen.remove();
+            }, 500);
+
+            // Now start the SSE connection
+            startStream(bars);
+        }
+
+        function startStream(bars) {
+            const source = new EventSource("/stream");
+
+            source.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                bars.forEach(bar => bar.addMessage(msg.text));
+            };
+
+            source.onerror = (err) => {
+                console.error("SSE error", err);
+            };
+        }
+        let barsVisible = false;
+        container.style.display = barsVisible ? 'block' : 'none';
+
+        document.addEventListener('click', (e) => {
+            // Optional: ignore clicks on other interactive elements
+            // if (e.target.closest('someSelector')) return;
+
+            barsVisible = !barsVisible;
+            container.style.display = barsVisible ? 'block' : 'none';
+        });
+        init();
+    </script>
+</body>
+</html>
