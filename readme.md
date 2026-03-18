@@ -9,7 +9,7 @@ Inspired by DougDoug at [www.twitch.tv/dougdoug](https://www.twitch.tv/dougdoug)
 ## Download
 
 ```bash
-git clone URL_HERE
+git clone https://github.com/6Maku/BiliBili-Message-Triggers.git
 ```
 
 Or you can download the zip on Github and extract it where you want the code to run.
