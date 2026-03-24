@@ -6,6 +6,9 @@ Made for streaming as a way for viewers to engage with and affect the stream.
 
 Inspired by DougDoug at [www.twitch.tv/dougdoug](https://www.twitch.tv/dougdoug)
 
+Video:
+![https://www.bilibili.com/video/BV1hoAAzQEiP/](https://www.bilibili.com/video/BV1hoAAzQEiP/)
+
 ## Download
 
 ```bash
